@@ -44,56 +44,19 @@ test -z "$(git status --porcelain)"
 SDK_RELEASE_VERSION=$(node -p "require('./packages/core/package.json').version")
 SDK_RELEASE_SHA=$(git rev-parse HEAD)
 SDK_RELEASE_DIR="$PWD/artifacts/release-$SDK_RELEASE_VERSION"
-mkdir -p "$SDK_RELEASE_DIR"
-
-pnpm --dir packages/core pack --out "$SDK_RELEASE_DIR/openai-auth-$SDK_RELEASE_VERSION.tgz"
-pnpm --dir packages/react pack --out "$SDK_RELEASE_DIR/openai-auth-react-$SDK_RELEASE_VERSION.tgz"
+node scripts/release.ts pack "$SDK_RELEASE_DIR"
 ```
 
-Use pnpm to pack workspace dependencies into registry-compatible versions.
-`pnpm check:packages` checks its own temporary archives. Inspect the actual release
-archives with the same source and archive guards:
+This command requires a clean checkout and an empty output directory. It checks
+source manifests before packing, uses pnpm to resolve workspace dependencies,
+and inspects both actual archives with the package-content guards. It writes
+`release.json` with the source commit, package versions, SHA-256 hashes, and
+SHA-512 integrity values. It preserves existing release artifacts.
 
-```sh
-node --input-type=module - "$SDK_RELEASE_DIR" "$SDK_RELEASE_SHA" <<'NODE'
-import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { assertPackageSources, inspectPackedPackage } from './scripts/package-contents.ts';
-
-assertPackageSources(process.cwd());
-const packages = [];
-for (const directory of ['core', 'react']) {
-  const source = join('packages', directory);
-  const manifest = JSON.parse(readFileSync(join(source, 'package.json'), 'utf8'));
-  const filename = `${manifest.name.replace('@', '').replace('/', '-')}-${manifest.version}.tgz`;
-  const archive = join(process.argv[2], filename);
-  inspectPackedPackage(
-    archive,
-    manifest,
-    readFileSync(join(source, 'LICENSE'), 'utf8'),
-    readFileSync(join(source, 'NOTICE'), 'utf8'),
-  );
-  const bytes = readFileSync(archive);
-  packages.push({
-    name: manifest.name,
-    version: manifest.version,
-    filename,
-    sha256: createHash('sha256').update(bytes).digest('hex'),
-    integrity: `sha512-${createHash('sha512').update(bytes).digest('base64')}`,
-  });
-}
-writeFileSync(
-  join(process.argv[2], 'release.json'),
-  `${JSON.stringify({ sourceCommit: process.argv[3], packages }, null, 2)}\n`,
-);
-NODE
-```
-
-Review both archive file lists, manifests, READMEs, licenses, and notices. Retain the
-archives, `release.json`, check results, and distribution inventory together.
-Publish these inspected archives. If source or package bytes change, repeat validation
-and packing before publication.
+Review both archive file lists, manifests, READMEs, licenses, and notices. Retain
+the archives, `release.json`, check results, and distribution inventory together.
+Publish these inspected archives. If source or package bytes change, repeat
+validation and packing before publication.
 
 ## Publish the package pair
 
@@ -156,17 +119,82 @@ Retain the source commit, archive hashes, and registry verification results.
 
 ## Automate subsequent releases
 
-Keep Changesets for versioning and release PRs. Configure the GitHub release bot
-separately from npm publication access. Use [Changesets automation](https://changesets.dev/guide/automating)
-for version-PR setup and [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/)
-for OIDC configuration.
+[Release](../.github/workflows/release.yml) runs after successful push CI on
+`main`, or through a manual dispatch from `main`. It verifies CI for the exact
+source commit. Changesets 3 selects whether to prepare a version PR or publish
+versions that are absent from npm.
 
-Configure a trusted publisher for each npm package after it exists. Bind each
-publisher to `openai/auth-javascript`, the exact workflow filename, and the protected
-release environment. Use a supported GitHub-hosted runner and OIDC-capable npm.
-Grant `id-token: write` only to the publishing job.
+Both switches below start at `false`. Private visibility also blocks the packing
+and publishing jobs. Version PR automation can be enabled while the repo is private.
 
-The workflow must check the reviewed release commit and publish its inspected
-artifacts after required checks pass. Keep package installation and builds separate
-from the job that holds publication permissions. Preserve the package order,
-integrity checks, and partial-release recovery described above.
+| Setting                               | Required value or scope                                                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Variable `RELEASE_AUTOMATION_ENABLED` | Set to `true` after the release App is available.                                                                |
+| Variable `NPM_PUBLISH_ENABLED`        | Keep `false` until publication is authorized and the setup below is complete.                                    |
+| Variable `OPENAI_SDKS_APP_CLIENT_ID`  | The client ID of the approved `openai-sdks` App.                                                                 |
+| Secret `OPENAI_SDKS_APP_PRIVATE_KEY`  | Available in environment `release`, or through the existing organization secret scoped to this repo.             |
+| App installation                      | Include this repo. Tokens request repository-specific contents access and, for version PRs, pull-request access. |
+| Environment `release`                 | Permit deployments from the `main` branch only.                                                                  |
+| Environment `npm-publish`             | Permit `main` only. Require an Identity Platform reviewer and prevent self-review.                               |
+| npm trusted publishers                | Both packages: owner `openai`, repo `auth-javascript`, workflow `release.yml`, environment `npm-publish`.        |
+
+An organization administrator must grant access to the App and its organization
+secret. Repository admin access alone cannot do this. Preserve the read-only
+default `GITHUB_TOKEN` permissions and the setting that prevents Actions from
+creating or approving PRs with that token. The App token creates version PRs and
+allows their normal CI events to run.
+
+The `Immutable SDK release tags` ruleset prevents updates and deletion of
+`@openai/auth@*` and `@openai/auth-react@*` tags, with no bypass actors. It permits
+new tags. Keep these rules when enabling publication.
+
+Before enabling npm publication:
+
+1. Complete and verify the manual first publication of **both** packages. The
+   publisher refuses to bootstrap a package that is absent from npm.
+2. Configure each package's [npm trusted publisher](https://docs.npmjs.com/trusted-publishers/)
+   with the exact values above and allow direct publication with `npm publish`.
+   New configurations default to staged publication. The pinned Node runtime
+   includes an OIDC-capable npm. No npm token is needed in GitHub.
+3. Complete the separately authorized public-repository transition. Automatic
+   publication requires a public repo and uses npm provenance.
+4. Verify environment protections, App access, required CI, code-owner review,
+   and the [CLA acceptance checks](cla.md). Then explicitly enable
+   `NPM_PUBLISH_ENABLED`.
+
+### Release sequence
+
+1. Pending Changesets produce a draft version PR. The action runs
+   `pnpm version:packages:ci` to update both versions, changelogs, and lockfile.
+   Review and merge this PR through the protected-branch process.
+2. Successful CI for that main commit permits a fresh build and archive audit.
+   The workflow retains the archives and `release.json` in an immutable GitHub
+   artifact for 90 days. Later jobs receive that exact artifact ID.
+3. An Identity Platform reviewer approves `npm-publish`. The publishing job
+   installs no dependencies and performs no build. It checks archive digests,
+   the source commit, live repository visibility, and exact CI result, then
+   publishes through OIDC. Core must be visible with matching integrity and
+   `latest` before React is published.
+4. A separate job installs the exact registry versions into a fresh consumer.
+   It checks ESM, CommonJS, client creation, React rendering, and CSS. These
+   synthetic checks do not establish a production authentication flow.
+5. After verification, the App creates both Changesets-compatible package tags
+   and GitHub releases. Each release retains its archive and the shared integrity
+   manifest. Existing tags and assets must match; they are not replaced.
+
+### Recover a failed release
+
+Inspect both registry versions and the retained manifest first. Rerun the
+**failed jobs of the original run**, which reuses the successful pack job's
+artifact ID. An existing version is skipped only if its integrity matches.
+Registry access failures and mismatches stop publication.
+
+Do not rerun all jobs or start a fresh build after partial publication. The
+packing preflight rejects an existing target version to preserve the original
+artifacts during recovery. A consumer or GitHub-record failure can also be retried
+from the original run after npm publication has completed.
+
+Keep the archives before their 90-day retention expires. If they are no longer
+available, recover the retained approved archives before continuing; do not
+rebuild and assume the bytes match. Use the manual verification steps above for
+registry or integration issues that require maintainer investigation.
