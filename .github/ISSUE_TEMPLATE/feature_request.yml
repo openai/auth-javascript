@@ -21,7 +21,7 @@ body:
       label: Proposed improvement
       description: Describe the behavior you want. Include an API or usage example if helpful.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: alternatives
     attributes:
