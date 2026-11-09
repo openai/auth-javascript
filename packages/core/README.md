@@ -25,10 +25,14 @@ for authentication setup.
 
 ## Mount a sign-in button
 
-Add a container to your page:
+Add a container and a plain sign-in link to your page:
 
 ```html
 <div id="sign-in"></div>
+<p>
+  <a href="/auth/chatgpt" data-oai-siwc-button>Sign in with ChatGPT</a> if the button is
+  unavailable.
+</p>
 <p id="sign-in-error" role="alert"></p>
 ```
 
@@ -55,6 +59,9 @@ const button = auth.mountSignInButton(document.getElementById('sign-in')!, { wid
 sign-in. Replace it with your real route. The SDK does not register OAuth clients,
 create the route, verify tokens, or establish an application session. Your backend
 or auth framework owns those operations.
+
+Keep the link available before JavaScript loads and after the browser restores
+the page with Back. It starts the same route as the SDK button.
 
 If your auth client starts sign-in through JavaScript, pass `adapter` instead of
 `authPath`. The [adapter guide](https://github.com/openai/auth-javascript/blob/main/docs/getting-started.md#connect-an-auth-client)

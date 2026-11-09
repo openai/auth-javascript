@@ -54,6 +54,28 @@ serveLoopback(async (url) => {
   if (url.pathname === '/') {
     return respond(await readFile(resolve(directory, 'fixture.html')), 'text/html; charset=utf-8');
   }
+  if (url.pathname === '/auth-path-fallback') {
+    const response = respond(
+      `<!doctype html><html lang="en"><head><title>Sign-in fallback</title></head><body>
+      <div id="sign-in"></div>
+      <p><a href="/auth/start" data-oai-siwc-button>Sign in with ChatGPT</a> if the button is unavailable.</p>
+      <script type="module">
+        import { createChatGPTAuth } from '/packages/core/dist/client/index.mjs';
+        const auth = createChatGPTAuth({ authPath: '/auth/start' });
+        auth.mountSignInButton(document.getElementById('sign-in'));
+        window.addEventListener('pageshow', (event) => {
+          document.documentElement.dataset.restoredFromCache = String(event.persisted);
+        });
+        window.addEventListener('pagehide', () => {
+          delete document.documentElement.dataset.restoredFromCache;
+        });
+      </script></body></html>`,
+      'text/html; charset=utf-8',
+    );
+    // Allow the browser to keep this synthetic page in its back/forward cache.
+    response.headers.delete('Cache-Control');
+    return response;
+  }
   if (url.pathname === '/react') {
     return respond(
       await readFile(resolve(directory, 'react-fixture.html')),

@@ -27,10 +27,20 @@ for authentication setup.
 import { ChatGPTAuthProvider, ChatGPTSignInButton } from '@openai/auth-react';
 
 export function SignIn() {
+  const authPath = '/auth/chatgpt';
+
   return (
-    <ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt' }}>
-      <ChatGPTSignInButton width="full" />
-    </ChatGPTAuthProvider>
+    <>
+      <ChatGPTAuthProvider options={{ authPath }}>
+        <ChatGPTSignInButton width="full" />
+      </ChatGPTAuthProvider>
+      <p>
+        <a href={authPath} data-oai-siwc-button="">
+          Sign in with ChatGPT
+        </a>{' '}
+        if the button is unavailable.
+      </p>
+    </>
   );
 }
 ```
@@ -49,6 +59,9 @@ Buttons inside one provider share an attempt, so clicking another button cannot
 start duplicate work. Render the provider inside your framework's client boundary
 when required. Server rendering produces a styled button that stays disabled
 until its client binding is ready.
+
+Include the link in the initial HTML and keep it available after JavaScript loads.
+It also works if Back restores a page with the SDK button disabled.
 
 ## Use an existing core client
 

@@ -28,16 +28,26 @@ Install both packages in your React application:
 npm install @openai/auth @openai/auth-react
 ```
 
-Wrap your sign-in view in `ChatGPTAuthProvider`:
+Wrap the SDK button in `ChatGPTAuthProvider` and include a plain sign-in link.
 
 ```tsx
 import { ChatGPTAuthProvider, ChatGPTSignInButton } from '@openai/auth-react';
 
 export function SignIn() {
+  const authPath = '/auth/chatgpt';
+
   return (
-    <ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt' }}>
-      <ChatGPTSignInButton width="full" />
-    </ChatGPTAuthProvider>
+    <>
+      <ChatGPTAuthProvider options={{ authPath }}>
+        <ChatGPTSignInButton width="full" />
+      </ChatGPTAuthProvider>
+      <p>
+        <a href={authPath} data-oai-siwc-button="">
+          Sign in with ChatGPT
+        </a>{' '}
+        if the button is unavailable.
+      </p>
+    </>
   );
 }
 ```
@@ -46,6 +56,10 @@ export function SignIn() {
 GET request. The SDK does not create it. If your auth framework starts sign-in
 through a JavaScript function, use an [adapter](docs/getting-started.md#connect-an-auth-client)
 instead. The [Auth.js example](examples/authjs/README.md) demonstrates that approach.
+
+Include the link in the initial HTML and keep it available after JavaScript loads.
+Users can follow it before the button is ready or if the browser's Back action
+restores a disabled button.
 
 Default styles load automatically. For an app that blocks inline styles, use
 [external stylesheet mode](docs/csp.md).
@@ -58,10 +72,14 @@ Install the core package:
 npm install @openai/auth
 ```
 
-Add a container to your page:
+Add the button container and link to your page's HTML.
 
 ```html
 <div id="sign-in"></div>
+<p>
+  <a href="/auth/chatgpt" data-oai-siwc-button>Sign in with ChatGPT</a> if the button is
+  unavailable.
+</p>
 ```
 
 Mount the button after that element exists:
@@ -78,8 +96,9 @@ const button = auth.mountSignInButton(document.getElementById('sign-in')!, {
 // When the client is no longer needed: await auth.destroy();
 ```
 
-The same requirement applies: your application must own the route. Use the
-[DOM guide](packages/core/README.md) for shared buttons, session observation, error handling, and cleanup.
+The link and `authPath` use the same application-owned route. The
+[DOM guide](packages/core/README.md) covers shared buttons, session observation,
+error handling, and cleanup.
 
 ## Connect authentication
 

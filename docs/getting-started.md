@@ -56,20 +56,42 @@ use `/auth/chatgpt`. Replace it with your actual route.
 import { ChatGPTAuthProvider, ChatGPTSignInButton } from '@openai/auth-react';
 
 export function SignIn() {
+  const authPath = '/auth/chatgpt';
+
   return (
-    <ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt' }}>
-      <ChatGPTSignInButton />
-    </ChatGPTAuthProvider>
+    <>
+      <ChatGPTAuthProvider options={{ authPath }}>
+        <ChatGPTSignInButton />
+      </ChatGPTAuthProvider>
+      <p>
+        <a href={authPath} data-oai-siwc-button="">
+          Sign in with ChatGPT
+        </a>{' '}
+        if the button is unavailable.
+      </p>
+    </>
   );
 }
 ```
 
-Buttons in the same provider share sign-in state, preventing duplicate attempts.
-Render this view in your framework's client component boundary when required.
+SDK buttons in the same provider share sign-in state, preventing duplicate attempts.
+Render the SDK button in your framework's client component boundary when required.
+Include the plain link in the initial HTML. If your app renders only on the client,
+put the link in the HTML outside the React mount container.
 
 ### DOM
 
-Add `<div id="sign-in"></div>` to your HTML. Then run:
+Add the container and plain link to your HTML.
+
+```html
+<div id="sign-in"></div>
+<p>
+  <a href="/auth/chatgpt" data-oai-siwc-button>Sign in with ChatGPT</a> if the button is
+  unavailable.
+</p>
+```
+
+Mount the SDK button in the container.
 
 ```ts
 import { createChatGPTAuth } from '@openai/auth/client';
@@ -85,7 +107,11 @@ const button = auth.mountSignInButton(document.getElementById('sign-in')!);
 endpoint. It must resolve to the same origin and cannot contain URL credentials
 or a fragment. Your route is responsible for its normal transaction and CSRF
 protections. Navigation does not emit SDK completion or cancellation callbacks.
-Read the app session when the user returns.
+Read the app session when the user returns. Keep the plain link available before
+and after JavaScript loads. The browser's Back action can restore the page with
+the SDK button still disabled from navigation. The link lets the user try the
+same route again. To re-enable the SDK button itself, follow the
+[recovery guide](recovery.md#browser-backforward-navigation).
 
 ## Connect an auth client
 
