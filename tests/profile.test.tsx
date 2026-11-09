@@ -52,7 +52,7 @@ function setup(initial: ChatGPTAuthSession = signedOut) {
     getSession,
     unsubscribe,
     listeners,
-    adapter: { session: source, signIn },
+    options: { adapter: { signIn }, session: source },
     setSession(value: ChatGPTAuthSession) {
       session = value;
     },
@@ -87,12 +87,35 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('automatic adapter profiles', () => {
+describe('automatic session profiles', () => {
+  it('observes only the explicit source when an adapter also provides a legacy source', async () => {
+    const f = setup(signedIn);
+    const legacy = setup(signedOut);
+    const adapter = { signIn: f.signIn, session: legacy.source };
+    const { rerender } = render(
+      <ChatGPTAuthProvider options={{ adapter, session: f.source }}>
+        <Profile />
+      </ChatGPTAuthProvider>,
+    );
+    await flush();
+    expect(screen.getByTestId('profile').textContent).toBe(JSON.stringify(alice));
+    expect(legacy.getSession).not.toHaveBeenCalled();
+    rerender(
+      <ChatGPTAuthProvider options={{ adapter }}>
+        <Profile />
+      </ChatGPTAuthProvider>,
+    );
+    await flush();
+    expect(screen.getByTestId('profile').textContent).toBe('null');
+    expect(legacy.getSession).toHaveBeenCalledOnce();
+    expect(f.unsubscribe).toHaveBeenCalledOnce();
+  });
+
   it('keeps the current profile during background revalidation and applies the authoritative result', async () => {
     const f = setup(signedIn);
     const waiting = deferred<ChatGPTAuthSession>();
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile />
       </ChatGPTAuthProvider>,
     );
@@ -120,7 +143,7 @@ describe('automatic adapter profiles', () => {
     };
     render(
       <ChatGPTAuthProvider
-        options={{ adapter: { signIn: async () => ({ status: 'complete' }), session } }}
+        options={{ adapter: { signIn: async () => ({ status: 'complete' }) }, session }}
       >
         <Profile />
       </ChatGPTAuthProvider>,
@@ -140,7 +163,7 @@ describe('automatic adapter profiles', () => {
     } as ChatGPTAuthSession);
     const profiles: (ChatGPTAuthProfile | null)[] = [];
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile onCommit={(profile) => profiles.push(profile)} />
         <Profile />
       </ChatGPTAuthProvider>,
@@ -158,7 +181,7 @@ describe('automatic adapter profiles', () => {
     const f = setup();
     const onComplete = vi.fn();
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter, onSignInComplete: onComplete }}>
+      <ChatGPTAuthProvider options={{ ...f.options, onSignInComplete: onComplete }}>
         <Profile />
         <ChatGPTSignInButton />
       </ChatGPTAuthProvider>,
@@ -177,7 +200,7 @@ describe('automatic adapter profiles', () => {
     const f = setup(signedIn);
     f.signIn.mockResolvedValue({ status: 'cancelled' });
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile />
         <ChatGPTSignInButton />
       </ChatGPTAuthProvider>,
@@ -192,7 +215,7 @@ describe('automatic adapter profiles', () => {
   it('clears on invalidation and ignores an older read after sign-out', async () => {
     const f = setup(signedIn);
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile />
       </ChatGPTAuthProvider>,
     );
@@ -215,17 +238,17 @@ describe('automatic adapter profiles', () => {
     const second = setup({ status: 'authenticated', profile: { subject: 'bob' } });
     const late = deferred<ChatGPTAuthSession>();
     const seen: (ChatGPTAuthProfile | null)[] = [];
-    const tree = (adapter: ChatGPTAuthSignInAdapter) => (
-      <ChatGPTAuthProvider options={{ adapter }}>
+    const tree = (session: ChatGPTAuthSessionSource) => (
+      <ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt', session }}>
         <Profile onCommit={(profile) => seen.push(profile)} />
       </ChatGPTAuthProvider>
     );
-    const { rerender } = render(tree(first.adapter));
+    const { rerender } = render(tree(first.source));
     await flush();
     first.getSession.mockReturnValueOnce(late.promise);
     act(() => first.notify());
     seen.length = 0;
-    rerender(tree(second.adapter));
+    rerender(tree(second.source));
     expect(seen[0]).toBeNull();
     await flush();
     await act(async () => late.resolve(signedIn));
@@ -240,7 +263,7 @@ describe('automatic adapter profiles', () => {
     f.getSession.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
     const { unmount } = render(
       <StrictMode>
-        <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+        <ChatGPTAuthProvider options={f.options}>
           <Profile />
         </ChatGPTAuthProvider>
       </StrictMode>,
@@ -266,10 +289,10 @@ describe('automatic adapter profiles', () => {
     const other = setup();
     render(
       <>
-        <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+        <ChatGPTAuthProvider options={f.options}>
           <Profile />
         </ChatGPTAuthProvider>
-        <ChatGPTAuthProvider options={{ adapter: other.adapter }}>
+        <ChatGPTAuthProvider options={other.options}>
           <Profile />
         </ChatGPTAuthProvider>
       </>,
@@ -287,7 +310,7 @@ describe('automatic adapter profiles', () => {
   it('revalidates on focus and bfcache restoration', async () => {
     const f = setup(signedIn);
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile />
       </ChatGPTAuthProvider>,
     );
@@ -306,7 +329,7 @@ describe('automatic adapter profiles', () => {
   it('treats missing picture as a valid profile and a missing linked profile as a valid session', async () => {
     const f = setup({ status: 'authenticated', profile: { subject: 'alice' } });
     render(
-      <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+      <ChatGPTAuthProvider options={f.options}>
         <Profile />
       </ChatGPTAuthProvider>,
     );
@@ -355,7 +378,7 @@ describe('profile session recovery', () => {
     async (failure) => {
       const f = setup(signedIn);
       render(
-        <ChatGPTAuthProvider options={{ adapter: f.adapter }}>
+        <ChatGPTAuthProvider options={f.options}>
           <Profile />
         </ChatGPTAuthProvider>,
       );

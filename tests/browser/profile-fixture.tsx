@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import type { ChatGPTAuthSession, ChatGPTAuthSignInAdapter } from '@openai/auth';
+import type {
+  ChatGPTAuthSession,
+  ChatGPTAuthSessionSource,
+  ChatGPTAuthSignInAdapter,
+} from '@openai/auth';
 import {
   ChatGPTAuthProvider,
   ChatGPTProfilePicture,
@@ -40,18 +44,18 @@ const adapter: ChatGPTAuthSignInAdapter = {
     );
     return { status: 'complete' };
   },
-  session: {
-    async getSession({ signal }) {
-      signal.throwIfAborted();
-      if (failRead) {
-        throw new Error('Simulated session read failure');
-      }
-      return session;
-    },
-    subscribe(onChange) {
-      listeners.add(onChange);
-      return () => listeners.delete(onChange);
-    },
+};
+const sessionSource: ChatGPTAuthSessionSource = {
+  async getSession({ signal }) {
+    signal.throwIfAborted();
+    if (failRead) {
+      throw new Error('Simulated session read failure');
+    }
+    return session;
+  },
+  subscribe(onChange) {
+    listeners.add(onChange);
+    return () => listeners.delete(onChange);
   },
 };
 function Account() {
@@ -105,7 +109,7 @@ function Account() {
   );
 }
 createRoot(document.getElementById('profile-root')!).render(
-  <ChatGPTAuthProvider options={{ adapter }}>
+  <ChatGPTAuthProvider options={{ adapter, session: sessionSource }}>
     <Account />
   </ChatGPTAuthProvider>,
 );

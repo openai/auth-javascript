@@ -77,18 +77,18 @@ for (const Provider of [esm.ChatGPTAuthProvider, cjs.ChatGPTAuthProvider]) {
           attempts++;
           return { status: 'complete' };
         },
-        session: {
-          async getSession() {
-            reads++;
-            return {
-              status: 'authenticated',
-              profile: { subject: 'one', picture: 'https://images.example/account.png' },
-            };
-          },
-          subscribe() {
-            subscriptions++;
-            return () => {};
-          },
+      };
+      const session = {
+        async getSession() {
+          reads++;
+          return {
+            status: 'authenticated',
+            profile: { subject: 'one', picture: 'https://images.example/account.png' },
+          };
+        },
+        subscribe() {
+          subscriptions++;
+          return () => {};
         },
       };
       function ProfileObserver() {
@@ -98,7 +98,7 @@ for (const Provider of [esm.ChatGPTAuthProvider, cjs.ChatGPTAuthProvider]) {
       const html = renderToString(
         React.createElement(
           Provider,
-          { options: { adapter } },
+          { options: { adapter, session } },
           React.createElement(Picture, { alt: 'Account picture' }),
           React.createElement(Picture, {
             size: 48,

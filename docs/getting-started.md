@@ -151,10 +151,9 @@ successful sign-in. Keep tokens and raw provider errors out of adapter results.
 
 ## Add profiles, styling, and state
 
-- **Profiles:** Add an optional `adapter.session` source to read verified profile
-  data from your app session. Observe it with the core client's `subscribeSession()`
+- **Profiles:** Pass an optional `session` source alongside `authPath` or `adapter`
+  to read verified profile data from your app session. Observe it with the core client's `subscribeSession()`
   and `getSessionSnapshot()`, or use `ChatGPTProfilePicture` and `useChatGPTProfile()` in React. See [profile integration](api.md#automatic-profile-loading-react).
-  `authPath` alone does not provide a profile source.
 - **Styles:** Defaults load automatically. Use [external stylesheet mode](csp.md)
   if your Content Security Policy blocks inline styles. Also use this mode for
   React 18 with Trusted Types enforcement.

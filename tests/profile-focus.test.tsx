@@ -18,10 +18,9 @@ it.each(['focus', 'pageshow'] as const)(
     const getSession = vi.fn(async (): Promise<ChatGPTAuthSession> => session);
     const adapter = {
       signIn: vi.fn(async () => ({ status: 'complete' as const })),
-      session: { getSession },
     };
     const { container } = render(
-      <ChatGPTAuthProvider options={{ adapter }}>
+      <ChatGPTAuthProvider options={{ adapter, session: { getSession } }}>
         <ChatGPTProfilePicture />
       </ChatGPTAuthProvider>,
     );

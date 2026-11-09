@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import type { ChatGPTAuthSignInAdapter } from '@openai/auth';
+import type { ChatGPTAuthSignInConfiguration } from '@openai/auth';
 import {
   ChatGPTAuthProvider,
   ChatGPTProfilePicture,
@@ -19,9 +19,11 @@ if (stylesheet === 'external') {
   });
 }
 
-const adapter: ChatGPTAuthSignInAdapter = {
-  async signIn() {
-    return { status: 'complete' };
+const options: ChatGPTAuthSignInConfiguration = {
+  adapter: {
+    async signIn() {
+      return { status: 'complete' };
+    },
   },
   session: {
     async getSession() {
@@ -39,7 +41,7 @@ const adapter: ChatGPTAuthSignInAdapter = {
 
 function Fixture() {
   return (
-    <ChatGPTAuthProvider options={{ adapter }} stylesheet={stylesheet}>
+    <ChatGPTAuthProvider options={options} stylesheet={stylesheet}>
       {['en', 'ar'].map((locale) => (
         <section key={locale} aria-label={locale === 'ar' ? 'Arabic variants' : 'English variants'}>
           <h2>{locale === 'ar' ? 'Arabic' : 'English'}</h2>

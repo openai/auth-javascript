@@ -9,7 +9,7 @@ import {
 import { signOut } from 'next-auth/react';
 import { useRouter } from 'next/router';
 import { useState } from 'react';
-import { refreshAppSession } from '../lib/app-session';
+import { appSession, refreshAppSession } from '../lib/app-session';
 import { chatgptAuth } from '../lib/chatgpt-auth';
 
 function Account() {
@@ -80,7 +80,7 @@ function Account() {
 
 export default function Home() {
   return (
-    <ChatGPTAuthProvider options={{ adapter: chatgptAuth }}>
+    <ChatGPTAuthProvider options={{ adapter: chatgptAuth, session: appSession }}>
       <Account />
     </ChatGPTAuthProvider>
   );

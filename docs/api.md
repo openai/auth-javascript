@@ -25,8 +25,8 @@ Supply exactly one of `authPath` and `adapter`:
   See the [adapter example](getting-started.md#connect-an-auth-client).
 
 Do not return tokens, authorization codes, or raw provider responses from the
-adapter. Its optional `session` capability supplies verified profile data for
-any renderer. See [session observation](#session-observation).
+adapter. An optional `session` alongside either sign-in method supplies verified
+profile data for any renderer. See [session observation](#session-observation).
 
 | Callback                                      | When it runs                                                                      |
 | --------------------------------------------- | --------------------------------------------------------------------------------- |
@@ -269,15 +269,15 @@ or buttons/hooks outside a provider throw an error.
 
 ## Session observation
 
-An adapter can expose an optional `session` capability alongside `signIn`.
+Pass an optional `session` source alongside `authPath` or `adapter`.
 The core client provides `getSessionSnapshot()`, `subscribeSession(listener)`, and
 `refreshSession()`. React uses these same methods for profile display.
 
 ```ts
 import { createChatGPTAuth } from '@openai/auth/client';
-import { chatgptAuth } from './chatgpt-auth';
+import { appSession } from './app-session';
 
-const auth = createChatGPTAuth({ adapter: chatgptAuth });
+const auth = createChatGPTAuth({ authPath: '/auth/chatgpt', session: appSession });
 const renderSession = () => {
   const { status, profile } = auth.getSessionSnapshot();
   // Update your account UI from the app's verified session source.
@@ -289,6 +289,10 @@ await auth.refreshSession(); // Optional explicit read, also works without a sub
 // When the observer is no longer needed:
 unsubscribe();
 ```
+
+The older `adapter.session` field is deprecated. Move it to `session` in the client
+configuration or React provider options. If both are set, the top-level `session`
+is used.
 
 The stable, frozen snapshot has `{ status, profile }`:
 
@@ -317,23 +321,16 @@ The app's existing auth system still verifies identity and owns its session.
 `complete` alone never establishes a profile.
 
 ```ts
-import type {
-  ChatGPTAuthSession,
-  ChatGPTAuthSessionSource,
-  ChatGPTAuthSignInAdapter,
-} from '@openai/auth';
+import type { ChatGPTAuthSession, ChatGPTAuthSessionSource } from '@openai/auth';
 
-// Your existing auth bridge implements these operations. Its backend verifies
-// identity and returns only profile fields the user has consented to share.
+// Your app verifies identity and returns profile fields the user has consented to share.
 declare function readVerifiedAppSession(signal: AbortSignal): Promise<ChatGPTAuthSession>;
 declare function subscribeToAppSession(onChange: () => void): () => void;
-declare const existingAdapter: ChatGPTAuthSignInAdapter;
 
-const session: ChatGPTAuthSessionSource = {
+export const appSession: ChatGPTAuthSessionSource = {
   getSession: ({ signal }) => readVerifiedAppSession(signal),
   subscribe: subscribeToAppSession, // Optional. Notify on sign-out and account changes.
 };
-const chatgptAuth: ChatGPTAuthSignInAdapter = { ...existingAdapter, session };
 ```
 
 `getSession({ signal })` returns one of:
@@ -366,6 +363,7 @@ components render its verified display claims.
 
 ```tsx
 import { ChatGPTAuthProvider, ChatGPTProfilePicture, useChatGPTProfile } from '@openai/auth-react';
+import { appSession } from './app-session';
 
 function Account() {
   const profile = useChatGPTProfile();
@@ -377,7 +375,7 @@ function Account() {
   );
 }
 
-<ChatGPTAuthProvider options={{ adapter: chatgptAuth }}>
+<ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt', session: appSession }}>
   <Account />
 </ChatGPTAuthProvider>;
 ```

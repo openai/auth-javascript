@@ -120,26 +120,27 @@ Use the [HTTPS deployment guide](../../docs/authjs-https.md) before deploying th
 2. The adapter calls Auth.js `signIn('openai')`. Auth.js handles the redirect,
    callback validation, state, PKCE, nonce, and application cookies.
 3. When the user returns to the app, the SDK reads `/api/auth/session` through
-   `adapter.session`. The SDK displays the profile from your application.
+   `options.session`. The SDK displays the profile from your application.
 
-Connect the React components to the adapter:
+Connect the React components to the adapter and session source:
 
 ```tsx
 import { ChatGPTAuthProvider, ChatGPTSignInButton } from '@openai/auth-react';
+import { appSession } from './lib/app-session';
 import { chatgptAuth } from './lib/chatgpt-auth';
 
 export function SignIn() {
   return (
-    <ChatGPTAuthProvider options={{ adapter: chatgptAuth }}>
+    <ChatGPTAuthProvider options={{ adapter: chatgptAuth, session: appSession }}>
       <ChatGPTSignInButton />
     </ChatGPTAuthProvider>
   );
 }
 ```
 
-The `chatgptAuth` import is the adapter from this example. It connects the UI to
-Auth.js and includes the application session source. The SDK never receives OAuth
-tokens. Its `redirecting` interaction state means the adapter requested navigation.
+The `chatgptAuth` adapter connects the UI to Auth.js. The `appSession` source reads
+the application session. The SDK never receives OAuth tokens. Its `redirecting`
+interaction state means the adapter requested navigation.
 The application session determines whether the user is signed in.
 
 ## What to copy into an existing app

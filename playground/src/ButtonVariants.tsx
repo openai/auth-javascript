@@ -67,12 +67,12 @@ const examples: readonly ButtonExample[] = [
 const previewSignIn: ChatGPTAuthSignInConfiguration = {
   adapter: {
     signIn: async () => ({ status: 'cancelled' }),
-    session: {
-      getSession: async () => ({
-        status: 'authenticated',
-        profile: { subject: 'playground-button-preview', name: 'Demo profile' },
-      }),
-    },
+  },
+  session: {
+    getSession: async () => ({
+      status: 'authenticated',
+      profile: { subject: 'playground-button-preview', name: 'Demo profile' },
+    }),
   },
 };
 
@@ -193,7 +193,7 @@ export function ButtonVariants({
       <details className="button-variants__setup">
         <summary>Provider and profile setup</summary>
         <p>
-          In your app, use your existing sign-in adapter and its authoritative session source.
+          In your app, connect your sign-in flow and your verified application session source.
           <code> ChatGPTProfilePicture </code> reads the session's profile fields that the user
           consented to share. It does not discover an account before sign-in. The slot matches the
           logo: 20 × 20px for standard buttons and 18 × 18px for compact buttons. CSS clips content

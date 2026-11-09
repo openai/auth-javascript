@@ -133,14 +133,14 @@ an existing button or use the visual model.
 
 ## Observe the app session
 
-An adapter can provide a `session` source that reads your app's verified session.
-The core client exposes this state without React:
+Pass a `session` source alongside `authPath` or `adapter` to read your app's verified
+session. The core client exposes this state without React:
 
 ```ts
 import { createChatGPTAuth } from '@openai/auth/client';
-import { chatgptAuth } from './chatgpt-auth'; // Your adapter with a session source.
+import { appSession } from './app-session'; // Your app's session source.
 
-const auth = createChatGPTAuth({ adapter: chatgptAuth });
+const auth = createChatGPTAuth({ authPath: '/auth/chatgpt', session: appSession });
 const unsubscribe = auth.subscribeSession(() => {
   const { status, profile } = auth.getSessionSnapshot();
   console.info('App session:', status, profile?.name);

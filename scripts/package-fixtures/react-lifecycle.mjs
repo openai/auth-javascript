@@ -56,14 +56,14 @@ try {
           resolveAttempt = resolve;
         });
       },
-      session: {
-        async getSession() {
-          return { status: 'authenticated', profile: { subject: 'verified-consumer' } };
-        },
-        subscribe(listener) {
-          subscriptions.add(listener);
-          return () => subscriptions.delete(listener);
-        },
+    };
+    const session = {
+      async getSession() {
+        return { status: 'authenticated', profile: { subject: 'verified-consumer' } };
+      },
+      subscribe(listener) {
+        subscriptions.add(listener);
+        return () => subscriptions.delete(listener);
       },
     };
     const objectRef = React.createRef();
@@ -72,7 +72,11 @@ try {
     await act(async () => {
       root = hydrateRoot(
         container,
-        lifecycleTree(React, Provider, Button, Picture, sdk, { adapter, buttonRef: objectRef }),
+        lifecycleTree(React, Provider, Button, Picture, sdk, {
+          adapter,
+          session,
+          buttonRef: objectRef,
+        }),
         { onRecoverableError: (error) => recoverableErrors.push(error) },
       );
     });
@@ -115,7 +119,11 @@ try {
     };
     await act(async () => {
       root.render(
-        lifecycleTree(React, Provider, Button, Picture, sdk, { adapter, buttonRef: callbackRef }),
+        lifecycleTree(React, Provider, Button, Picture, sdk, {
+          adapter,
+          session,
+          buttonRef: callbackRef,
+        }),
       );
     });
     assert.equal(objectRef.current, null, 'replacing a ref must detach the previous object ref');

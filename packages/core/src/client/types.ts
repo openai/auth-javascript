@@ -62,7 +62,7 @@ export interface ChatGPTAuthClientSnapshot {
   readonly state: ChatGPTAuthSignInState;
 }
 
-/** The app session reported by the optional adapter.session source. */
+/** The app session reported by the optional session source. */
 export interface ChatGPTAuthSessionSnapshot {
   readonly status: 'unavailable' | 'loading' | 'authenticated' | 'unauthenticated' | 'error';
   readonly profile: ChatGPTAuthProfile | null;

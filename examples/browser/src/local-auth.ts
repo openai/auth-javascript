@@ -3,6 +3,7 @@ import type {
   ChatGPTAuthSignInAdapterResult,
   ChatGPTAuthErrorInfo,
   ChatGPTAuthProfile,
+  ChatGPTAuthSessionSource,
 } from '@openai/auth';
 
 export type Consumer = 'vanilla' | 'react';
@@ -180,23 +181,22 @@ function openLocalAuthPopup(consumer: Consumer): Promise<ExistingClientResult> {
   });
 }
 
+export const localAppSession: ChatGPTAuthSessionSource = {
+  async getSession({ signal }) {
+    // The demo simulates these fields. In a real app, return only verified claims the user consented to share.
+    const session = await readAppSession(signal);
+    return session.authenticated
+      ? { status: 'authenticated', profile: session.profile }
+      : { status: 'unauthenticated' };
+  },
+  subscribe(onChange) {
+    sessionListeners.add(onChange);
+    return () => sessionListeners.delete(onChange);
+  },
+};
+
 export function createLocalPopupAdapter(consumer: Consumer): ChatGPTAuthSignInAdapter {
   return {
-    session: {
-      async getSession({ signal }) {
-        // The app session endpoint is the authority. A sign-in result is not session proof.
-        // The demo simulates these fields.
-        // Real adapters expose only verified claims that the user consented to share.
-        const session = await readAppSession(signal);
-        return session.authenticated
-          ? { status: 'authenticated', profile: session.profile }
-          : { status: 'unauthenticated' };
-      },
-      subscribe(onChange) {
-        sessionListeners.add(onChange);
-        return () => sessionListeners.delete(onChange);
-      },
-    },
     signIn() {
       return openLocalAuthPopup(consumer).then((result): ChatGPTAuthSignInAdapterResult => {
         switch (result) {

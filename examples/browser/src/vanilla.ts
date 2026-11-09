@@ -4,6 +4,7 @@ import {
   createLocalPopupAdapter,
   createSessionReader,
   clearAppSession,
+  localAppSession,
   safeError,
   sessionLabel,
 } from './local-auth.js';
@@ -58,9 +59,14 @@ function mount() {
   }
   auth = createChatGPTAuth(
     mode.value === 'route'
-      ? { authPath: '/demo/auth/start?consumer=vanilla', onError: (error) => log(safeError(error)) }
+      ? {
+          authPath: '/demo/auth/start?consumer=vanilla',
+          session: localAppSession,
+          onError: (error) => log(safeError(error)),
+        }
       : {
           adapter,
+          session: localAppSession,
           onSignInComplete: () => {
             log('The adapter reported completion. The app will check its session separately.');
             void refreshSession().catch(hostError);

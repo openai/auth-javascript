@@ -35,7 +35,8 @@ function fixture(subject = 'alice') {
   const unsubscribe = vi.fn();
   const subscribe = vi.fn(() => unsubscribe);
   const options = {
-    adapter: { signIn, session: { getSession, subscribe } },
+    adapter: { signIn },
+    session: { getSession, subscribe },
     onSignInComplete: vi.fn(),
   };
   const client = createChatGPTAuth(options);

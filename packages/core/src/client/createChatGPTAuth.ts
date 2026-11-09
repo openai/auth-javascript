@@ -32,7 +32,7 @@ import { SessionController } from './SessionController.js';
 /** Create an inert client. Authentication starts only from an attached button's click. */
 export function createChatGPTAuth(signIn: ChatGPTAuthSignInConfiguration): ChatGPTAuthClient {
   let next = configuration(signIn);
-  const session = new SessionController(next.adapter?.session);
+  const session = new SessionController(next.session);
   let destroyed = false;
   let busy = false;
   let starting = false;
@@ -352,7 +352,7 @@ export function createChatGPTAuth(signIn: ChatGPTAuthSignInConfiguration): ChatG
         route(candidate, target.container);
       }
       next = candidate;
-      session.updateSource(candidate.adapter?.session);
+      session.updateSource(candidate.session);
     },
     destroy() {
       if (!destroyed) {

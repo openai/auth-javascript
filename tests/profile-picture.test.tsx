@@ -16,7 +16,7 @@ type Session =
       };
     };
 
-function sessionAdapter(initial: Session) {
+function routeWithSession(initial: Session) {
   let current = initial;
   const listeners = new Set<() => void>();
   const session = {
@@ -29,7 +29,7 @@ function sessionAdapter(initial: Session) {
     }),
   };
   return {
-    adapter: { signIn: vi.fn(async () => ({ status: 'complete' as const })), session },
+    options: { authPath: '/auth/start', session },
     async update(next: Session) {
       await act(async () => {
         current = next;
@@ -49,9 +49,9 @@ afterEach(() => cleanup());
 
 describe('ChatGPTProfilePicture', () => {
   it('server-renders a 20px default fallback and deduplicated automatic styles without reading a session', () => {
-    const { adapter } = sessionAdapter(picture('one'));
+    const { options } = routeWithSession(picture('one'));
     const html = renderToString(
-      <ChatGPTAuthProvider options={{ adapter }}>
+      <ChatGPTAuthProvider options={options}>
         <ChatGPTProfilePicture />
         <ChatGPTProfilePicture size={48} className="account-avatar" style={{ borderRadius: 6 }} />
       </ChatGPTAuthProvider>,
@@ -80,8 +80,7 @@ describe('ChatGPTProfilePicture', () => {
     expect(html).toContain('@layer openai-auth');
     expect(html).toContain(':where([data-chatgpt-profile-picture])');
     expect(html).toContain('width: var(--chatgpt-profile-picture-size, max-content)');
-    expect(adapter.session.getSession).not.toHaveBeenCalled();
-    expect(adapter.signIn).not.toHaveBeenCalled();
+    expect(options.session.getSession).not.toHaveBeenCalled();
   });
 
   it.each([1, 20, 24, 48.5])(
@@ -107,12 +106,10 @@ describe('ChatGPTProfilePicture', () => {
     const pending = new Promise<Session>((resolve) => {
       resolveSession = resolve;
     });
-    const adapter = {
-      signIn: vi.fn(async () => ({ status: 'complete' as const })),
-      session: { getSession: vi.fn(() => pending) },
-    };
+    const adapter = { signIn: vi.fn(async () => ({ status: 'complete' as const })) };
+    const session = { getSession: vi.fn(() => pending) };
     const { container } = render(
-      <ChatGPTAuthProvider options={{ adapter }}>
+      <ChatGPTAuthProvider options={{ adapter, session }}>
         <ChatGPTProfilePicture alt="Example profile picture" size={40} />
       </ChatGPTAuthProvider>,
     );
@@ -136,9 +133,9 @@ describe('ChatGPTProfilePicture', () => {
   });
 
   it('uses an accessible fallback for missing or broken pictures, then retries a changed URL', async () => {
-    const source = sessionAdapter({ status: 'authenticated', profile: { subject: 'one' } });
+    const source = routeWithSession({ status: 'authenticated', profile: { subject: 'one' } });
     const { container } = render(
-      <ChatGPTAuthProvider options={{ adapter: source.adapter }}>
+      <ChatGPTAuthProvider options={source.options}>
         <ChatGPTProfilePicture alt="Account picture" fallback={<span>Custom fallback</span>} />
       </ChatGPTAuthProvider>,
     );
@@ -162,9 +159,9 @@ describe('ChatGPTProfilePicture', () => {
   });
 
   it('resets for another account even with the same URL and ignores detached image events after sign-out', async () => {
-    const source = sessionAdapter(picture('one'));
+    const source = routeWithSession(picture('one'));
     const { container } = render(
-      <ChatGPTAuthProvider options={{ adapter: source.adapter }}>
+      <ChatGPTAuthProvider options={source.options}>
         <ChatGPTProfilePicture />
       </ChatGPTAuthProvider>,
     );
@@ -196,9 +193,9 @@ describe('ChatGPTProfilePicture', () => {
   it.each(['data:image/png;base64,aGVsbG8=', 'javascript:alert(1)', '/relative.png'])(
     'falls back for a non-HTTP(S) absolute URL: %s',
     async (url) => {
-      const { adapter } = sessionAdapter(picture('one', url));
+      const { options } = routeWithSession(picture('one', url));
       const { container } = render(
-        <ChatGPTAuthProvider options={{ adapter }}>
+        <ChatGPTAuthProvider options={options}>
           <ChatGPTProfilePicture />
         </ChatGPTAuthProvider>,
       );
@@ -211,9 +208,9 @@ describe('ChatGPTProfilePicture', () => {
   it.each([undefined, 24])(
     'preserves CSS dimension overrides with size=%s and requires a provider',
     (size) => {
-      const { adapter } = sessionAdapter({ status: 'unauthenticated' });
+      const { options } = routeWithSession({ status: 'unauthenticated' });
       const html = renderToString(
-        <ChatGPTAuthProvider options={{ adapter }}>
+        <ChatGPTAuthProvider options={options}>
           <ChatGPTProfilePicture className="avatar" size={size} style={{ width: 56, height: 48 }} />
         </ChatGPTAuthProvider>,
       );
@@ -247,10 +244,10 @@ describe('ChatGPTProfilePicture', () => {
     { name: 'a bigint', size: 48n },
     { name: 'a symbol', size: Symbol('size') },
   ])('uses the 20px default for $name in SSR and loaded images', async ({ size }) => {
-    const { adapter } = sessionAdapter(picture('one'));
+    const { options } = routeWithSession(picture('one'));
     // JavaScript consumers can supply values outside the public numeric type.
     const tree = (
-      <ChatGPTAuthProvider options={{ adapter }}>
+      <ChatGPTAuthProvider options={options}>
         <ChatGPTProfilePicture size={size as number} />
       </ChatGPTAuthProvider>
     );

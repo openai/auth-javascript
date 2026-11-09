@@ -133,7 +133,7 @@ are application functions. `reconcileAuth` checks your session and external oper
 
 If your application can issue overlapping session reads, also guard against an
 older response replacing a newer session result. The core client guards this
-ordering for reads through `adapter.session`. Your app must guard any other reads. `expectedState` protects the SDK interaction only.
+ordering for reads through the configured `session` source. Your app must guard any other reads. `expectedState` protects the SDK interaction only.
 
 ## Recovering a pending attempt
 

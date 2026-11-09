@@ -136,7 +136,8 @@ Pass the same explicit locale on the server and client to render translated labe
 
 ## Display the signed-in profile
 
-Add a `session` source to your adapter. Then render profile UI inside its provider:
+Add a `session` source to the provider options alongside `authPath` or `adapter`.
+Then render profile UI inside the provider:
 
 ```tsx
 import {
@@ -145,7 +146,7 @@ import {
   ChatGPTSignInButton,
   useChatGPTProfile,
 } from '@openai/auth-react';
-import { chatgptAuth } from './chatgpt-auth';
+import { appSession } from './app-session';
 
 function Account() {
   const profile = useChatGPTProfile();
@@ -160,19 +161,19 @@ function Account() {
 
 export function App() {
   return (
-    <ChatGPTAuthProvider options={{ adapter: chatgptAuth }}>
+    <ChatGPTAuthProvider options={{ authPath: '/auth/chatgpt', session: appSession }}>
       <Account />
     </ChatGPTAuthProvider>
   );
 }
 ```
 
-`chatgptAuth` is your application's adapter, not an SDK export. Its
-`session.getSession({ signal })` reads your verified app session and returns
+`appSession` is your application's session source. Its `getSession({ signal })`
+reads your verified app session and returns
 `{ status: 'authenticated', profile }` or `{ status: 'unauthenticated' }`.
 The optional profile has `{ subject, name?, picture? }`. Follow the
 [session-source contract](https://github.com/openai/auth-javascript/blob/main/docs/api.md#automatic-profile-loading-react),
-or adapt the [Auth.js implementation](https://github.com/openai/auth-javascript/blob/main/examples/authjs/src/lib/chatgpt-auth.ts).
+or adapt the [Auth.js implementation](https://github.com/openai/auth-javascript/blob/main/examples/authjs/src/lib/app-session.ts).
 
 The provider observes the core client, which refreshes the profile on subscription,
 successful sign-in, source change notifications, and page focus/restoration. `useChatGPTProfile()` returns `null`

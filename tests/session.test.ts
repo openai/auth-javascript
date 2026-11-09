@@ -44,12 +44,12 @@ function setup(initial = authenticated) {
   const signIn = vi
     .fn<() => Promise<ChatGPTAuthSignInAdapterResult>>()
     .mockResolvedValue({ status: 'complete' });
-  const adapter = { signIn, session: source };
-  const client = createChatGPTAuth({ adapter });
+  const options = { adapter: { signIn }, session: source };
+  const client = createChatGPTAuth(options);
   clients.push(client);
   return {
     client,
-    adapter,
+    options,
     source,
     signIn,
     getSession,
@@ -79,6 +79,49 @@ describe('core app-session observation', () => {
     await client.refreshSession();
     expect(client.getSessionSnapshot()).toEqual({ status: 'unavailable', profile: null });
     unsubscribe();
+  });
+
+  it('lazily observes and revalidates a session with an app-owned sign-in route', async () => {
+    const getSession = vi
+      .fn<ChatGPTAuthSessionSource['getSession']>()
+      .mockResolvedValueOnce(authenticated)
+      .mockResolvedValueOnce(unauthenticated);
+    const client = createChatGPTAuth({ authPath: '/auth/login', session: { getSession } });
+    clients.push(client);
+    expect(client.getSessionSnapshot().status).toBe('loading');
+    expect(getSession).not.toHaveBeenCalled();
+
+    client.subscribeSession(vi.fn());
+    await settle();
+    expect(client.getSessionSnapshot().profile).toEqual(authenticated.profile);
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    await settle();
+    expect(client.getSessionSnapshot()).toEqual({ status: 'unauthenticated', profile: null });
+    expect(client.getSnapshot().state.status).toBe('idle');
+  });
+
+  it('reads the legacy adapter source only when no top-level session is supplied', async () => {
+    const f = setup();
+    const legacy = setup(unauthenticated);
+    const readLegacy = vi.fn(() => legacy.source);
+    const adapter = {
+      signIn: f.signIn,
+      get session() {
+        return readLegacy();
+      },
+    };
+    f.client.updateSignIn({ adapter, session: f.source });
+    f.client.subscribeSession(vi.fn());
+    await settle();
+    expect(readLegacy).not.toHaveBeenCalled();
+    expect(legacy.getSession).not.toHaveBeenCalled();
+    expect(f.client.getSessionSnapshot().profile).toEqual(authenticated.profile);
+
+    f.client.updateSignIn({ adapter });
+    await settle();
+    expect(readLegacy).toHaveBeenCalledOnce();
+    expect(legacy.getSession).toHaveBeenCalledOnce();
+    expect(f.client.getSessionSnapshot()).toEqual({ status: 'unauthenticated', profile: null });
   });
 
   it('shares one read and source subscription until the last subscriber leaves', async () => {
@@ -118,7 +161,11 @@ describe('core app-session observation', () => {
     f.client.subscribeSession(vi.fn());
     await settle();
     const snapshot = f.client.getSessionSnapshot();
-    f.client.updateSignIn({ adapter: { ...f.adapter }, onSignInComplete: vi.fn() });
+    f.client.updateSignIn({
+      ...f.options,
+      adapter: { ...f.options.adapter },
+      onSignInComplete: vi.fn(),
+    });
     expect(f.client.getSessionSnapshot()).toBe(snapshot);
     expect(f.source.subscribe).toHaveBeenCalledTimes(1);
     expect(f.getSession).toHaveBeenCalledTimes(1);
@@ -152,7 +199,7 @@ describe('core app-session observation', () => {
     f.client.subscribeSession(vi.fn());
     const oldNotify = [...f.listeners][0]!;
     const other = setup(unauthenticated);
-    f.client.updateSignIn({ adapter: other.adapter });
+    f.client.updateSignIn({ authPath: '/auth/login', session: other.source });
     expect(f.unsubscribe).toHaveBeenCalledTimes(1);
     expect(f.getSession.mock.calls[0]![0].signal.aborted).toBe(true);
     oldNotify();
@@ -251,15 +298,13 @@ describe('core app-session observation', () => {
     const getSession = vi.fn(() => pending.promise);
     let notify!: () => void;
     const client = createChatGPTAuth({
-      adapter: {
-        signIn: async () => ({ status: 'complete' }),
-        session: {
-          getSession,
-          subscribe(listener) {
-            notify = listener;
-            listener();
-            throw new Error('private-subscription-error');
-          },
+      authPath: '/auth/login',
+      session: {
+        getSession,
+        subscribe(listener) {
+          notify = listener;
+          listener();
+          throw new Error('private-subscription-error');
         },
       },
     });
@@ -281,12 +326,12 @@ describe('core app-session observation', () => {
     const replacement = setup(unauthenticated);
     f.getSession.mockImplementation(({ signal }) => {
       signal.addEventListener('abort', () => {
-        f.client.updateSignIn({ adapter: replacement.adapter });
+        f.client.updateSignIn(replacement.options);
       });
       return new Promise(() => {});
     });
     f.client.subscribeSession(vi.fn());
-    f.client.updateSignIn({ adapter: intermediate.adapter });
+    f.client.updateSignIn(intermediate.options);
     await settle();
     expect(intermediate.getSession).not.toHaveBeenCalled();
     expect(replacement.getSession).toHaveBeenCalledTimes(1);
@@ -299,12 +344,12 @@ describe('core app-session observation', () => {
     const intermediate = setup();
     const replacement = setup(unauthenticated);
     f.unsubscribe.mockImplementation(() => {
-      f.client.updateSignIn({ adapter: replacement.adapter });
+      f.client.updateSignIn(replacement.options);
       throw new Error('private-cleanup-error');
     });
     f.client.subscribeSession(vi.fn());
     await settle();
-    f.client.updateSignIn({ adapter: intermediate.adapter });
+    f.client.updateSignIn(intermediate.options);
     await settle();
     expect(intermediate.getSession).not.toHaveBeenCalled();
     expect(replacement.getSession).toHaveBeenCalledTimes(1);
@@ -319,7 +364,7 @@ describe('core app-session observation', () => {
     f.client.subscribeSession(() => {
       if (replace && f.client.getSessionSnapshot().status === 'loading') {
         replace = false;
-        f.client.updateSignIn({ adapter: replacement.adapter });
+        f.client.updateSignIn(replacement.options);
       }
     });
     await settle();
@@ -342,6 +387,12 @@ describe('core app-session observation', () => {
   ])('rejects invalid session sources without exposing application errors', (session) => {
     const adapter = { signIn: async () => ({ status: 'complete' }), session };
     expect(() =>
+      createChatGPTAuth({
+        authPath: '/auth/login',
+        session: session as unknown as ChatGPTAuthSessionSource,
+      }),
+    ).toThrow('session requires a getSession() method and an optional subscribe() method.');
+    expect(() =>
       createChatGPTAuth({ adapter: adapter as unknown as ChatGPTAuthSignInAdapter }),
     ).toThrow('adapter.session requires a getSession() method and an optional subscribe() method.');
   });
@@ -360,7 +411,7 @@ describe('session refresh after sign-in', () => {
       return authenticated;
     });
     f.client.updateSignIn({
-      adapter: f.adapter,
+      ...f.options,
       onInteractionChange(state) {
         events.push(state.status);
       },
@@ -401,7 +452,7 @@ describe('session refresh after sign-in', () => {
     const f = setup();
     const unsubscribe = f.client.subscribeSession(vi.fn());
     await settle();
-    f.client.updateSignIn({ adapter: f.adapter, onSignInComplete: unsubscribe });
+    f.client.updateSignIn({ ...f.options, onSignInComplete: unsubscribe });
     const button = document.createElement('button');
     const binding = f.client.bindSignInButton(button);
     button.addEventListener('click', binding.activate);
@@ -416,7 +467,7 @@ describe('session refresh after sign-in', () => {
     f.client.subscribeSession(vi.fn());
     await settle();
     f.client.updateSignIn({
-      adapter: f.adapter,
+      ...f.options,
       onSignInComplete() {
         f.getSession.mockResolvedValue(authenticated);
         f.client.recover();

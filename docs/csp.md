@@ -38,7 +38,7 @@ Set `stylesheet` on the provider to apply it to all of that provider's buttons a
 profile pictures. This example accepts your application's existing auth adapter:
 
 ```tsx
-import type { ChatGPTAuthSignInAdapter } from '@openai/auth';
+import type { ChatGPTAuthSessionSource, ChatGPTAuthSignInAdapter } from '@openai/auth';
 import {
   ChatGPTAuthProvider,
   ChatGPTSignInButton,
@@ -46,9 +46,15 @@ import {
 } from '@openai/auth-react';
 import '@openai/auth-react/styles.css';
 
-export function SignInPanel({ appAuth }: { appAuth: ChatGPTAuthSignInAdapter }) {
+export function SignInPanel({
+  appAuth,
+  appSession,
+}: {
+  appAuth: ChatGPTAuthSignInAdapter;
+  appSession: ChatGPTAuthSessionSource;
+}) {
   return (
-    <ChatGPTAuthProvider options={{ adapter: appAuth }} stylesheet="external">
+    <ChatGPTAuthProvider options={{ adapter: appAuth, session: appSession }} stylesheet="external">
       <ChatGPTSignInButton className="login-button" />
       <ChatGPTProfilePicture size={48} alt="Current account" />
     </ChatGPTAuthProvider>
@@ -59,7 +65,7 @@ export function SignInPanel({ appAuth }: { appAuth: ChatGPTAuthSignInAdapter }) 
 Use the same stylesheet setting on the server and client. A nested provider has
 its own setting. Numeric profile `size` values work without an inline style
 attribute, including while the picture loads or the component displays a fallback. Profile
-pictures require an adapter with a session source. See the
+pictures use the configured session source. See the
 [React API](api.md) for details.
 
 External mode works with React 18 and 19. React 18 also requires this mode with

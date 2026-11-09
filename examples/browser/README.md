@@ -32,7 +32,7 @@ Open [Vanilla JavaScript](http://127.0.0.1:4320/vanilla) or
 1. Keep **Existing-auth popup adapter** selected. Click the ChatGPT button.
 2. Choose **Complete demo sign-in** in the local popup. The example creates a simulated app
    session. It then reads that session independently of the SDK interaction result.
-3. Both examples observe `adapter.session` through the core client. The vanilla
+3. Both examples observe the configured `session` source through the core client. The vanilla
    example displays its status; React displays the profile picture. Reload the page to restore the profile. Select **Clear demo
    session** to restore the fallback picture.
 4. Start another attempt. Cancel or close the popup. Try the error and redirect
@@ -41,7 +41,7 @@ Open [Vanilla JavaScript](http://127.0.0.1:4320/vanilla) or
 Select **App-owned authPath** to try a redirect instead. The SDK navigates to a
 same-origin route, which sends you to the simulated provider page. On return, the
 app reads `/demo/api/session`. Navigation does not fire an SDK completion callback.
-This mode has no adapter session source, so the SDK profile remains a fallback.
+Both sign-in modes use the same session source to display the profile.
 
 The recovery controls demonstrate how an app checks its session before it recovers a stalled interaction.
 Check the session before you recover the interaction. Retiring a pending UI
@@ -55,7 +55,7 @@ a late result, but the app's own session can still change. See
 | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | [Vanilla consumer](src/vanilla.ts)                        | Create a client, mount a button, observe interaction and session state, and recover the UI.             |
 | [React consumer](src/react.tsx)                           | Provider, profile components, hooks, accessibility props, and recovery controls.                        |
-| [Auth adapter](src/local-auth.ts)                         | Opening a popup during the click, validating messages, mapping outcomes, and notifying session changes. |
+| [Auth adapter and session source](src/local-auth.ts)      | Opening a popup during the click, validating messages, mapping outcomes, and notifying session changes. |
 | [Local provider](src/provider.ts) and [server](server.ts) | The simulated authentication service for these examples.                                                |
 
 Replace the local provider with your existing authentication

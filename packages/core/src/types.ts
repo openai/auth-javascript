@@ -33,7 +33,7 @@ export interface ChatGPTAuthSessionSource {
 export interface ChatGPTAuthSignInAdapter {
   /** Start the external flow synchronously within this call to preserve user activation. */
   signIn(): Promise<ChatGPTAuthSignInAdapterResult>;
-  /** The client uses this optional application session reader to load profiles for its subscribers. */
+  /** @deprecated Pass `session` in the sign-in configuration. The top-level source takes precedence. */
   readonly session?: ChatGPTAuthSessionSource | undefined;
 }
 
@@ -77,4 +77,7 @@ export type ChatGPTAuthSignInBinding =
 
 /** Select exactly one method to start sign-in. The application retains ownership of accounts and sessions. */
 export type ChatGPTAuthSignInConfiguration = ChatGPTAuthSignInBinding &
-  ChatGPTAuthSignInOutcomeCallbacks;
+  ChatGPTAuthSignInOutcomeCallbacks & {
+    /** Optional verified application session reader for either sign-in binding. */
+    readonly session?: ChatGPTAuthSessionSource | undefined;
+  };

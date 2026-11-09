@@ -5,9 +5,17 @@ import type { ChatGPTAuthSessionSnapshot } from './types.js';
 const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-export function sessionSource(adapter: object): ChatGPTAuthSessionSource | undefined {
+export function sessionSource(
+  value: unknown,
+  adapter?: object,
+): ChatGPTAuthSessionSource | undefined {
+  let param = 'session';
   try {
-    const source: unknown = Reflect.get(adapter, 'session');
+    let source = value;
+    if (source === undefined && adapter !== undefined) {
+      param = 'adapter.session';
+      source = Reflect.get(adapter, 'session');
+    }
     if (source === undefined) {
       return undefined;
     }
@@ -23,8 +31,8 @@ export function sessionSource(adapter: object): ChatGPTAuthSessionSource | undef
   }
   throw new ChatGPTAuthError({
     code: 'invalid_configuration',
-    param: 'adapter.session',
-    message: 'adapter.session requires a getSession() method and an optional subscribe() method.',
+    param,
+    message: `${param} requires a getSession() method and an optional subscribe() method.`,
     retryable: false,
   });
 }

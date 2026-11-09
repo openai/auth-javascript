@@ -282,16 +282,18 @@ const profileProvider: ChatGPTAuthProviderProps = {
       async signIn() {
         return { status: 'complete' };
       },
-      session: sessionSource,
     },
+    session: sessionSource,
   },
 };
 const profileAdapterReset: ChatGPTAuthSignInAdapter = {
   async signIn() {
     return { status: 'redirecting' };
   },
-  session: undefined,
 };
+navigation.updateSignIn({ authPath: '/auth/chatgpt', session: sessionSource });
+navigation.updateSignIn({ authPath: '/auth/chatgpt', session: undefined });
+createChatGPTAuth({ adapter: profileAdapterReset, session: sessionSource });
 const profilePictureProps: ChatGPTAuthProfilePictureProps = {
   size: 40,
   alt: 'Account picture',
@@ -329,7 +331,7 @@ void profilePictureSource;
 void invalidPictureSize;
 
 const externalStylesProvider: ChatGPTAuthProviderProps = {
-  options: { authPath: '/auth/start' },
+  options: { authPath: '/auth/start', session: sessionSource },
   stylesheet: 'external',
 };
 createChatGPTAuth({ authPath: '/auth/start' }).mountSignInButton(host, { stylesheet: 'external' });

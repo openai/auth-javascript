@@ -13,6 +13,7 @@ import {
   createLocalPopupAdapter,
   createSessionReader,
   clearAppSession,
+  localAppSession,
   safeError,
   sessionLabel,
   type AppSession,
@@ -105,11 +106,7 @@ function Controls({
         <ChatGPTProfilePicture size={48} alt="Demo account profile picture" />
         <span>
           {profile?.name ?? 'No profile available'}
-          <small style={{ display: 'block' }}>
-            {mode === 'popup'
-              ? 'The adapter loads the profile automatically (local simulation).'
-              : 'The authPath integration has no adapter session source.'}
-          </small>
+          <small style={{ display: 'block' }}>Profile from the simulated app session.</small>
         </span>
       </div>
       <div className="actions">
@@ -159,9 +156,14 @@ function App() {
   const signIn = useMemo<ChatGPTAuthSignInConfiguration>(
     () =>
       mode === 'route'
-        ? { authPath: '/demo/auth/start?consumer=react', onError: (error) => log(safeError(error)) }
+        ? {
+            authPath: '/demo/auth/start?consumer=react',
+            session: localAppSession,
+            onError: (error) => log(safeError(error)),
+          }
         : {
             adapter,
+            session: localAppSession,
             onSignInComplete: () => {
               log('The adapter reported completion. The app will check its session separately.');
               void refreshSession().catch(() => log('The app session check failed.'));

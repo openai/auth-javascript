@@ -5,6 +5,7 @@ import { sessionSource } from './SessionController.utils.js';
 export const configurationKeys = [
   'authPath',
   'adapter',
+  'session',
   'onInteractionChange',
   'onError',
   'onCancel',
@@ -33,6 +34,7 @@ export function configuration(value: unknown): ChatGPTAuthSignInConfiguration {
       }
     }
     destination(next.authPath, 'https://configuration.invalid');
+    next.session = sessionSource(next.session);
   } else {
     const adapter = next.adapter;
     if (typeof adapter !== 'object' || adapter === null) {
@@ -56,11 +58,10 @@ export function configuration(value: unknown): ChatGPTAuthSignInConfiguration {
         'a signIn() method returning Promise<{ status: "complete" | "cancelled" | "redirecting" }>',
       );
     }
-    const session = sessionSource(adapter);
+    next.session = sessionSource(next.session, adapter);
     try {
       next.adapter = Object.freeze({
         signIn: Function.prototype.bind.call(signIn, adapter),
-        session,
       });
     } catch {
       throw invalid('invalid_configuration', 'adapter.signIn', 'a callable signIn() method');

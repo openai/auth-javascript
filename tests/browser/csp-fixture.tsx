@@ -1,7 +1,11 @@
 import { useLayoutEffect, useState, version as reactVersion } from 'react';
 import { version as reactDOMVersion } from 'react-dom';
 import { hydrateRoot } from 'react-dom/client';
-import type { ChatGPTAuthSignInAdapter, ChatGPTAuthSignInAdapterResult } from '@openai/auth';
+import type {
+  ChatGPTAuthSessionSource,
+  ChatGPTAuthSignInAdapter,
+  ChatGPTAuthSignInAdapterResult,
+} from '@openai/auth';
 import { createChatGPTAuth } from '@openai/auth/client';
 import {
   ChatGPTAuthProvider,
@@ -23,17 +27,17 @@ function adapter(kind: 'dom' | 'react'): ChatGPTAuthSignInAdapter {
       state.calls[kind]++;
       return new Promise((resolve) => resolvers.set(kind, resolve));
     },
-    session: {
-      async getSession() {
-        return {
-          status: 'authenticated',
-          profile: { subject: 'csp', picture: `${location.origin}/profile-picture.svg` },
-        };
-      },
-    },
   };
 }
 const reactAdapter = adapter('react');
+const session: ChatGPTAuthSessionSource = {
+  async getSession() {
+    return {
+      status: 'authenticated',
+      profile: { subject: 'csp', picture: `${location.origin}/profile-picture.svg` },
+    };
+  },
+};
 let resize: (size: number) => void = () => {};
 const originalButton = document.getElementById('csp-react');
 function Fixture() {
@@ -43,7 +47,7 @@ function Fixture() {
     state.sameButton = document.getElementById('csp-react') === originalButton;
   }, []);
   return (
-    <ChatGPTAuthProvider options={{ adapter: reactAdapter }} stylesheet="external">
+    <ChatGPTAuthProvider options={{ adapter: reactAdapter, session }} stylesheet="external">
       <ChatGPTSignInButton id="csp-react" />
       <ChatGPTSignInButton id="csp-react-secondary" />
       <ChatGPTProfilePicture size={size} alt="CSP account" />

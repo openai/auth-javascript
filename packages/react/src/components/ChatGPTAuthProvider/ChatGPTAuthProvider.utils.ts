@@ -52,14 +52,20 @@ export function assertProviderBinding(props: ChatGPTAuthProviderProps): void {
 
 /** Read identity only. The core client validates and manages the session source. */
 export function readSessionSource(binding: ProviderBinding): ChatGPTAuthSessionSource | undefined {
+  let param = 'session';
   try {
+    const source = binding.options?.session;
+    if (source !== undefined) {
+      return source;
+    }
+    param = 'adapter.session';
     return binding.options?.adapter?.session;
   } catch {
     throw new ChatGPTAuthError({
       code: 'invalid_configuration',
-      message: 'adapter.session requires a getSession() method and an optional subscribe() method.',
+      message: `${param} requires a getSession() method and an optional subscribe() method.`,
       retryable: false,
-      param: 'adapter.session',
+      param,
     });
   }
 }

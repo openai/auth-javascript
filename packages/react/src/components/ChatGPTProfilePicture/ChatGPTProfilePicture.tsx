@@ -77,7 +77,7 @@ function ProfilePicture({
   );
 }
 
-/** Displays the consented picture from the adapter's current session, or a neutral fallback. */
+/** Displays the consented picture from the current app session, or a neutral fallback. */
 export function ChatGPTProfilePicture(props: ChatGPTAuthProfilePictureProps): ReactElement {
   const profile = useChatGPTProfile();
   const context = useContext(ProviderContext);
