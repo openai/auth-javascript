@@ -147,10 +147,13 @@ CSRF protections. It must not blindly redirect using untrusted query parameters.
 
 ## Browser discovery
 
-Use `[data-chatgpt-sign-in-button]` to find SDK-rendered DOM and React buttons.
-Wait until the button is visible and enabled before clicking.
+SDK-rendered DOM and React buttons include `data-oai-siwc-button` on the clickable
+element. Use `[data-oai-siwc-button]` to find Sign in with ChatGPT controls or
+`[data-chatgpt-sign-in-button]` to select SDK-rendered buttons specifically.
+Wait until the control is visible and enabled before clicking.
 
-Custom renderers that use `bindSignInButton` must add the attribute themselves.
+If you render your own button or link, add `data-oai-siwc-button` directly to the
+clickable element. See the [website integration guide](https://developers.openai.com/siwc/website#1-add-the-sign-in-button).
 
 ## React
 

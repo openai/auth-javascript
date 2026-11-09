@@ -6,15 +6,18 @@ import type { ChatGPTAuthSignInAdapterResult } from '@openai/auth';
 import { createChatGPTAuth, type ChatGPTAuthClient } from '@openai/auth/client';
 import { ChatGPTAuthProvider, ChatGPTSignInButton } from '@openai/auth-react';
 
-// Keep the consumer's selector literal so changes to the SDK cannot silently change this contract.
+// Keep consumer selectors literal so the SDK cannot silently change either contract.
 const selector = '[data-chatgpt-sign-in-button]';
+const integrationSelector = '[data-oai-siwc-button]';
 const groups: ChatGPTAuthClient[] = [];
 
 function discoverButtons(parent: ParentNode) {
   const matches = [...parent.querySelectorAll(selector)];
+  expect([...parent.querySelectorAll(integrationSelector)]).toEqual(matches);
   for (const match of matches) {
     expect(match).toBeInstanceOf(HTMLButtonElement);
     expect(match.getAttribute('type')).toBe('button');
+    expect(match.getAttribute('data-oai-siwc-button')).toBe('');
   }
   return matches as HTMLButtonElement[];
 }
@@ -79,8 +82,13 @@ describe('button discovery', () => {
           className={updated ? 'updated-entry' : 'account-entry'}
           variant={updated ? 'contained' : 'outlined'}
           data-chatgpt-sign-in-button={null}
+          data-oai-siwc-button={null}
         />
-        <ChatGPTSignInButton text="brand" data-chatgpt-sign-in-button={undefined} />
+        <ChatGPTSignInButton
+          text="brand"
+          data-chatgpt-sign-in-button={undefined}
+          data-oai-siwc-button="override"
+        />
       </ChatGPTAuthProvider>
     );
     const { container, rerender } = render(tree(false));

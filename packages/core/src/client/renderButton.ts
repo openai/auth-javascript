@@ -15,6 +15,7 @@ export function renderButton(
   const button = document.createElement('button');
   button.type = 'button';
   button.setAttribute('data-chatgpt-sign-in-button', '');
+  button.setAttribute('data-oai-siwc-button', '');
   const mark = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('fill', 'currentColor');

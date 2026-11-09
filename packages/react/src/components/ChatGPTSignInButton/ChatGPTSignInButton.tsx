@@ -130,6 +130,7 @@ export const ChatGPTSignInButton = forwardRef<HTMLButtonElement, ChatGPTAuthSign
         <button
           {...integrationAttributes}
           data-chatgpt-sign-in-button=""
+          data-oai-siwc-button=""
           data-chatgpt-appearance={props.appearance ?? 'auto'}
           data-chatgpt-size={props.size ?? 'standard'}
           data-chatgpt-width={props.width ?? 'content'}
