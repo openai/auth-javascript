@@ -1,0 +1,7 @@
+# Maintainers review automation, agreement, and publication changes.
+/.github/ @openai/identity-platform
+/CLA.md @openai/identity-platform
+/docs/cla.md @openai/identity-platform
+/docs/releasing.md @openai/identity-platform
+/scripts/release.ts @openai/identity-platform
+/scripts/package-contents.ts @openai/identity-platform

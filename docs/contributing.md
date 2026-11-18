@@ -224,6 +224,9 @@ or server. Inspect those complete outputs and retain all applicable notices when
 
 ## Prepare a change
 
+Read the [contributor license agreement](cla.md). The CLA check asks each unsigned
+contributor to give their own consent on the pull request.
+
 Keep changes focused. Add a minimal reproduction for a bug and tests that exercise
 its public behavior. Run the relevant checks above. Run `pnpm check` before submitting
 code changes. State any checks you could not run.

@@ -29,6 +29,7 @@
     "check": "pnpm format:check && pnpm i18n:check && pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm test:authjs && pnpm check:packages && pnpm check:authjs-consumer && pnpm test:browser && pnpm examples:build && pnpm example:authjs:build",
     "changeset": "changeset",
     "version:packages": "changeset version",
+    "version:packages:ci": "pnpm version:packages && pnpm install --lockfile-only --ignore-scripts",
     "example:authjs": "pnpm build && pnpm --filter @openai/auth-authjs-example dev",
     "example:authjs:build": "pnpm --filter @openai/auth-authjs-example build",
     "test:authjs": "pnpm --filter @openai/auth-authjs-example test",
